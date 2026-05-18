@@ -57,17 +57,24 @@ export default function Shared() {
                     {dead ? <span className="tag tag-r">{expired ? 'EXPIRED' : 'MAXED'}</span> : <span className="tag tag-g">LIVE</span>}
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
                   {[
                     ['DL', `${f.share_download_count}${f.share_max_downloads !== null ? `/${f.share_max_downloads}` : '/∞'}`],
+                    ['VIEWS', String(f.share_view_count ?? 0)],
                     ['EXPIRES', f.share_expires_at ? formatDistanceToNow(new Date(f.share_expires_at), { addSuffix: true }) : 'Never'],
-                    ['TOKEN', `...${f.share_token!.slice(-10)}`],
+                    ['TOKEN', `...${f.share_token!.slice(-8)}`],
                   ].map(([k, v]) => (
                     <div key={k} style={{ padding: '8px 10px', background: 'var(--raised)', border: '1px solid var(--border)' }}>
                       <p className="mono" style={{ fontSize: 9, color: 'var(--dim)', marginBottom: 2 }}>{k}</p>
                       <p className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>{v}</p>
                     </div>
                   ))}
+                </div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 12 }}>
+                  {f.share_password_hash && <span className="tag tag-b" style={{ fontSize: 9 }}>🔒 PASSWORD</span>}
+                  {(f.share_recipient_emails?.length ?? 0) > 0 && <span className="tag tag-b" style={{ fontSize: 9 }}>✉ EMAIL-LOCKED · {f.share_recipient_emails!.length}</span>}
+                  {f.share_otp_code && <span className="tag tag-a" style={{ fontSize: 9 }}>🔑 OTP</span>}
+                  {f.share_self_destruct && <span className="tag tag-r" style={{ fontSize: 9 }}>⚠ SELF-DESTRUCT</span>}
                 </div>
                 <div style={{ display: 'flex', gap: 8, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
                   {!dead && <button className="btn-g" style={{ fontSize: 10 }} onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/share/${f.share_token}`); setCopied(f.id); setTimeout(() => setCopied(null), 2000) }}>{copied === f.id ? '✓ COPIED' : 'COPY LINK'}</button>}

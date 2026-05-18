@@ -1,5 +1,6 @@
 -- SecureXfer — Full Supabase Setup
 -- Paste in SQL Editor → Run
+-- Safe to re-run: idempotent with IF NOT EXISTS / DROP IF EXISTS.
 
 create table if not exists public.profiles (
   id uuid references auth.users(id) on delete cascade primary key,
@@ -25,6 +26,15 @@ create table if not exists public.files (
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
 );
+
+-- v1.1 additive columns (safe re-run)
+alter table public.files add column if not exists share_password_hash text;
+alter table public.files add column if not exists share_recipient_emails text[];
+alter table public.files add column if not exists share_otp_code text;
+alter table public.files add column if not exists share_message text;
+alter table public.files add column if not exists share_view_count integer not null default 0;
+alter table public.files add column if not exists share_self_destruct boolean not null default false;
+
 alter table public.files enable row level security;
 drop policy if exists "f1" on public.files;
 drop policy if exists "f2" on public.files;
@@ -37,6 +47,28 @@ create or replace function public.set_updated_at()
 returns trigger as $$ begin new.updated_at = now(); return new; end; $$ language plpgsql;
 drop trigger if exists t_updated_at on public.files;
 create trigger t_updated_at before update on public.files for each row execute procedure public.set_updated_at();
+
+-- Audit log: every download attempt (success or denied)
+create table if not exists public.download_logs (
+  id uuid primary key default gen_random_uuid(),
+  file_id uuid references public.files(id) on delete cascade not null,
+  owner_id uuid references auth.users(id) on delete cascade not null,
+  recipient_email text,
+  status text not null,                  -- success | denied_email | denied_password | denied_otp | denied_expired | denied_maxed
+  user_agent text,
+  ip_hint text,
+  created_at timestamptz default now() not null
+);
+create index if not exists idx_download_logs_file on public.download_logs(file_id, created_at desc);
+create index if not exists idx_download_logs_owner on public.download_logs(owner_id, created_at desc);
+
+alter table public.download_logs enable row level security;
+drop policy if exists "dl1" on public.download_logs;
+drop policy if exists "dl2" on public.download_logs;
+-- Owners can read their logs
+create policy "dl1" on public.download_logs for select using (auth.uid() = owner_id);
+-- Anyone may insert (anonymous public share downloads logged)
+create policy "dl2" on public.download_logs for insert with check (true);
 
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('encrypted-files', 'encrypted-files', false, 52428800)

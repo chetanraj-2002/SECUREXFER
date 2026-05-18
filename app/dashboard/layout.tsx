@@ -21,6 +21,8 @@ export default function DashLayout({ children }: { children: React.ReactNode }) 
     { href: '/dashboard', label: 'FILES', icon: '▪' },
     { href: '/dashboard/upload', label: 'UPLOAD', icon: '↑' },
     { href: '/dashboard/shared', label: 'SHARED', icon: '⊗' },
+    { href: '/dashboard/activity', label: 'ACTIVITY', icon: '◴' },
+    { href: '/dashboard/email-verify', label: 'EMAIL VERIFY', icon: '@' },
   ]
 
   return (
